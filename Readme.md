@@ -15,9 +15,9 @@ The dataset includes current prices alongside **1-day, 1-week, 1-month, and 1-ye
 
 ## **Tech Stack**
 
-* **Python** (Pandas, NumPy, Matplotlib, Seaborn)
+* **Python** (Pandas, NumPy, Matplotlib, Seaborn,streamlit)
 * **Jupyter Notebooks** for exploratory data analysis (EDA)
-* *(Optional)* **Scikit-learn / Statsmodels** for forecasting
+
 
 ## **Use Cases**
 
