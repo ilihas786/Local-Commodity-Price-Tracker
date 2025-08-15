@@ -51,14 +51,46 @@ class InflationAnalyzer:
         )
 
         return inflation_df[["commodity", "unit", "inflation_rate"]]
+    
+    def generate_month_wise_inflation_dataset(self, df: pd.DataFrame) -> pd.DataFrame:
+        df["date"] = convert_to_datetime(df["date"])
+        latest_date = df["date"].max()
+        one_month_ago = latest_date.replace(month=latest_date.month - 1)
 
-    def show_dataset_streamlit(self, df: pd.DataFrame) -> None:
-        st.title("Inflation Rate Data Table")
+        latest_prices = df[df["date"] == latest_date]
+        month_back_prices = df[df["date"] == one_month_ago]
+
+        latest_prices.drop(columns=["date"], inplace=True)
+        month_back_prices.drop(columns=["date"], inplace=True)
+
+        inflation_df = latest_prices.merge(
+            month_back_prices,
+            on=["commodity", "unit"],
+            suffixes=("_latest", "_month_back"),
+        )
+
+        inflation_df["inflation_rate"] = self.calculate_inflation_rate(
+            inflation_df["price_latest"], inflation_df["price_month_back"]
+        )
+
+        return inflation_df[["commodity", "unit", "inflation_rate"]]
+
+    def show_dataset_streamlit(self, df: pd.DataFrame, view_type: str) -> None:
+        st.title(f"{view_type} Inflation Rate Data Table")
         st.dataframe(df)
 
 
 inflation_analyzer = InflationAnalyzer(source_file)
-inflation_df = inflation_analyzer.generate_year_wise_inflation_dataset(
+inflation_yearly_df = inflation_analyzer.generate_year_wise_inflation_dataset(
     inflation_analyzer.df
 )
-inflation_analyzer.show_dataset_streamlit(inflation_df)
+
+inflation_monthly_df = inflation_analyzer.generate_month_wise_inflation_dataset(
+    inflation_analyzer.df
+)
+view_type = st.selectbox("Select view", ["Yearly", "Monthly"])
+
+if view_type == "Yearly":
+    inflation_analyzer.show_dataset_streamlit(inflation_yearly_df,view_type)
+else :
+    inflation_analyzer.show_dataset_streamlit(inflation_monthly_df,view_type)
