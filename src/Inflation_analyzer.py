@@ -1,23 +1,15 @@
 import os
 from pathlib import Path
-
-import matplotlib.pyplot as plt
-import numpy as np
 import pandas as pd
 import streamlit as st
+import altair as alt
 
 from utils.functions import convert_to_datetime
 
-# Use os.path to get the absolute path of this script file
+# File paths
 script_path = os.path.abspath(__file__)
 root_dir = Path(script_path).parent.parent
 source_file = root_dir / "data" / "processed" / "data.csv"
-
-# print(f"Script location: {script_path}")
-# print(f"Root directory: {root_dir}")
-# print(f"Source file path: {source_file}")
-# print(f"Source file exists: {source_file.exists()}")
-# print(f"Absolute path: {source_file.resolve()}")
 
 
 class InflationAnalyzer:
@@ -37,8 +29,8 @@ class InflationAnalyzer:
         latest_prices = df[df["date"] == latest_date]
         year_back_prices = df[df["date"] == one_year_ago]
 
-        latest_prices.drop(columns=["date"], inplace=True)
-        year_back_prices.drop(columns=["date"], inplace=True)
+        latest_prices = latest_prices.drop(columns=["date"])
+        year_back_prices = year_back_prices.drop(columns=["date"])
 
         inflation_df = latest_prices.merge(
             year_back_prices,
@@ -51,17 +43,17 @@ class InflationAnalyzer:
         )
 
         return inflation_df[["commodity", "unit", "inflation_rate"]]
-    
+
     def generate_month_wise_inflation_dataset(self, df: pd.DataFrame) -> pd.DataFrame:
         df["date"] = convert_to_datetime(df["date"])
         latest_date = df["date"].max()
-        one_month_ago = latest_date.replace(month=latest_date.month - 1)
+        one_month_ago = latest_date - pd.DateOffset(months=1)
 
         latest_prices = df[df["date"] == latest_date]
         month_back_prices = df[df["date"] == one_month_ago]
 
-        latest_prices.drop(columns=["date"], inplace=True)
-        month_back_prices.drop(columns=["date"], inplace=True)
+        latest_prices = latest_prices.drop(columns=["date"])
+        month_back_prices = month_back_prices.drop(columns=["date"])
 
         inflation_df = latest_prices.merge(
             month_back_prices,
@@ -75,22 +67,63 @@ class InflationAnalyzer:
 
         return inflation_df[["commodity", "unit", "inflation_rate"]]
 
-    def show_dataset_streamlit(self, df: pd.DataFrame, view_type: str) -> None:
-        st.title(f"{view_type} Inflation Rate Data Table")
-        st.dataframe(df)
 
+# ---------- STREAMLIT UI ----------
+st.set_page_config(page_title="Inflation Dashboard", layout="wide")
+
+st.title("📈 Inflation Rate Dashboard")
 
 inflation_analyzer = InflationAnalyzer(source_file)
 inflation_yearly_df = inflation_analyzer.generate_year_wise_inflation_dataset(
     inflation_analyzer.df
 )
-
 inflation_monthly_df = inflation_analyzer.generate_month_wise_inflation_dataset(
     inflation_analyzer.df
 )
-view_type = st.selectbox("Select view", ["Yearly", "Monthly"])
 
-if view_type == "Yearly":
-    inflation_analyzer.show_dataset_streamlit(inflation_yearly_df,view_type)
-else :
-    inflation_analyzer.show_dataset_streamlit(inflation_monthly_df,view_type)
+tab1, tab2 = st.tabs(["📅 Yearly Inflation", "📅 Monthly Inflation"])
+
+
+def show_dashboard(df: pd.DataFrame, view_type: str):
+    # Metrics at top
+    col1, col2, col3 = st.columns(3)
+    col1.metric("📊 Highest Inflation", f"{df['inflation_rate'].max():.2f}%")
+    col2.metric("📉 Lowest Inflation", f"{df['inflation_rate'].min():.2f}%")
+    col3.metric("⚖️ Avg Inflation", f"{df['inflation_rate'].mean():.2f}%")
+
+    # Styled Dataframe
+    st.subheader("📋 Data Table")
+    st.dataframe(
+        df.style.background_gradient(
+            cmap="RdYlGn_r",
+            subset=["inflation_rate"],
+            vmin=-5,  # lowest meaningful inflation (deflation)
+            vmax=20,  # cap for high inflation
+        ).format({"inflation_rate": "{:.2f}%"})
+    )
+    # Interactive Chart (Altair)
+    st.subheader("📊 Inflation by Commodity")
+    chart = (
+        alt.Chart(df)
+        .mark_bar()
+        .encode(
+            x=alt.X("commodity", sort="-y"),
+            y="inflation_rate",
+            color=alt.Color(
+                "inflation_rate",
+                scale=alt.Scale(
+                    scheme="redyellowgreen", reverse=True
+                ),  # green = low, red = high
+            ),
+            tooltip=["commodity", "unit", alt.Tooltip("inflation_rate", format=".2f")],
+        )
+        .properties(width="container", height=400)
+    )
+    st.altair_chart(chart, use_container_width=True)
+
+
+with tab1:
+    show_dashboard(inflation_yearly_df, "Yearly")
+
+with tab2:
+    show_dashboard(inflation_monthly_df, "Monthly")

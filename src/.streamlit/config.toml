@@ -1,0 +1,7 @@
+[theme]
+base="dark"
+primaryColor="#ff4b4b"            # accent color (buttons, highlights)
+backgroundColor="#000000"         # full black background
+secondaryBackgroundColor="#1a1a1a" # cards/containers
+textColor="#ffffff"               # white text
+font="sans serif"
