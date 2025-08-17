@@ -13,7 +13,7 @@ source_file = root_dir / "data" / "processed" / "data.csv"
 # ================== STREAMLIT MAIN APP ==================
 st.set_page_config(page_title="Local Commodity Price Tracker", layout="wide")
 
-st.title("📊 Commodity Analysis Dashboard")
+st.title("Local Commodity Price Tracker")
 
 # Sidebar navigation
 page = st.sidebar.radio(
