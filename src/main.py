@@ -11,7 +11,7 @@ root_dir = Path(script_path).parent.parent
 source_file = root_dir / "data" / "processed" / "data.csv"
 
 # ================== STREAMLIT MAIN APP ==================
-st.set_page_config(page_title="Commodity Analysis Dashboard", layout="wide")
+st.set_page_config(page_title="Local Commodity Price Tracker", layout="wide")
 
 st.title("📊 Commodity Analysis Dashboard")
 
